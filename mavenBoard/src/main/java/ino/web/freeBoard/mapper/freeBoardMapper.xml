@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ino.web.freeBoard.mapper.FreeBoardMapper">
+	
+	<select id="getCount" resultType="int" parameterType="Map">
+		SELECT COUNT(*) FROM FREEBOARD
+		<if test="searchType == 'DCODE001'">
+			WHERE NUM LIKE '%'||#{keyword}||'%'
+		</if>
+		<if test="searchType == 'DCODE002'">
+			WHERE TITLE LIKE '%'||#{keyword}||'%'
+		</if>
+		<if test="searchType == 'DCODE003'">
+			WHERE TO_CHAR(REGDATE, 'YYYY-MM-DD') 
+			BETWEEN #{startDate} AND #{endDate}
+		</if>
+	</select>
+	
+	<select id="searchList" resultType="Map" parameterType="Map">
+		SELECT A.CODE, A.CODE_NAME, B.DETAIL_CODE, B.DETAIL_CODE_NAME, B.USE_YN
+		FROM MASTERTABLE A, DETAILTABLE B
+		WHERE A.CODE = B.CODE
+		AND B.USE_YN = 'Y'
+	</select>
+	
+	<select id="freeBoardGetList" resultType="freeBoardDto"
+		parameterType="Map"> <!-- resultType="ino.web.board.dto.BoardDto" -->
+		SELECT RNUM, A.NUM, A.TITLE, A.NAME, A.REGDATE, A.CONTENT
+		FROM
+		(SELECT
+		ROW_NUMBER() OVER (ORDER BY NUM DESC) AS RNUM, NUM, TITLE, NAME,
+		TO_CHAR(REGDATE, 'YYYY/MM/DD') REGDATE, CONTENT FROM FREEBOARD
+		<choose>
+		<when test="searchType == 'DCODE001'">
+			WHERE NUM LIKE '%' ||#{keyword}|| '%'
+		</when>
+		<when test="searchType == 'DCODE002'">
+			WHERE TITLE LIKE '%' ||#{keyword}|| '%'
+		</when>
+		<when test="searchType == 'DCODE003'">
+			WHERE TO_CHAR(REGDATE, 'YYYY-MM-DD') 
+			BETWEEN #{startDate} AND #{endDate}
+		</when>
+		</choose>
+			) A
+			WHERE RNUM BETWEEN #{startPage} AND #{endPage}
+			ORDER BY LPAD( NUM, 5 ) DESC
+	</select>
+
+
+	<insert id="freeBoardInsertPro" parameterType="freeBoardDto">
+		INSERT INTO
+		FREEBOARD(NUM, TITLE, NAME, REGDATE, CONTENT)
+		VALUES(
+		FREEBOARDNUM_SEQ.NEXTVAL, #{title}, #{name}, SYSDATE, #{content})
+	</insert>
+
+	<select id="freeBoardDetailByNum" resultType="freeBoardDto"
+		parameterType="int">
+		SELECT NUM, TITLE, NAME, TO_CHAR(REGDATE,'YYYY/MM/DD')
+		REGDATE, CONTENT FROM FREEBOARD
+		WHERE NUM=#{num}
+	</select>
+
+	<select id="freeBoardNewNum" resultType="int">
+		SELECT MAX(NUM)
+		FROM
+		FREEBOARD
+	</select>
+
+	<update id="freeBoardModify" parameterType="freeBoardDto">
+		UPDATE FREEBOARD
+		SET
+		TITLE = #{title}
+		, CONTENT = #{content}
+		WHERE NUM = #{num}
+
+	</update>
+
+	<update id="freeBoardDelete" parameterType="int">
+		DELETE FROM FREEBOARD
+		WHERE NUM
+		= #{num}
+
+	</update>
+
+
+</mapper>
